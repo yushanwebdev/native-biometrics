@@ -17,6 +17,7 @@ import {
   View,
   Button,
   TouchableHighlight,
+  Linking,
 } from 'react-native';
 
 import {
@@ -77,7 +78,7 @@ const App = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  const isBiometricSupport = async () => {
+  const onEnableBiometric = async () => {
     let {available, biometryType} =
       await ReactNativeBiometrics.isSensorAvailable();
     if (available && biometryType === ReactNativeBiometrics.TouchID) {
@@ -86,14 +87,32 @@ const App = () => {
       console.log('FaceID is supported', biometryType);
     } else if (available && biometryType === ReactNativeBiometrics.Biometrics) {
       console.log('Biometrics is supported', biometryType);
+
+      ReactNativeBiometrics.createKeys().then(resultObject => {
+        const {publicKey} = resultObject;
+        console.log('publicKey', publicKey);
+      });
     } else {
-      return console.log('Biometrics not supported', biometryType);
+      await Linking.openSettings();
     }
-    let {success, error} = await ReactNativeBiometrics.simplePrompt({
-      promptMessage: 'Sign in with Touch ID',
-      // cancelButtonText: 'Close',
+  };
+
+  const isBiometricSupport = async () => {
+    let epochTimeSeconds = Math.round(new Date().getTime() / 1000).toString();
+    let payload = epochTimeSeconds + 'some message';
+
+    ReactNativeBiometrics.createSignature({
+      promptMessage: 'Sign in',
+      payload: payload,
+    }).then(resultObject => {
+      const {success, signature} = resultObject;
+
+      console.log('resultObject', resultObject);
+
+      if (success) {
+        console.log(signature);
+      }
     });
-    console.log({success, error});
   };
 
   return (
@@ -103,6 +122,17 @@ const App = () => {
         contentInsetAdjustmentBehavior="automatic"
         style={backgroundStyle}>
         {/* <Header /> */}
+        <TouchableHighlight
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={{
+            height: 60,
+          }}>
+          <Button
+            title="Enable Biometric Authentication"
+            color="#fe7005"
+            onPress={onEnableBiometric}
+          />
+        </TouchableHighlight>
         <TouchableHighlight
           // eslint-disable-next-line react-native/no-inline-styles
           style={{
